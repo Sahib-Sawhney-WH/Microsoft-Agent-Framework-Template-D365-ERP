@@ -1,0 +1,167 @@
+[project]
+name = "msft-agent-framework"
+version = "1.0.0"
+description = "Extensible AI Assistant using Microsoft Agent Framework with dynamic tool loading"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Your Name", email = "your.email@example.com" }
+]
+keywords = ["ai", "agent", "azure-openai", "microsoft", "framework"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "azure-identity>=1.15.0",
+    "azure-core>=1.24.0",
+    "openai>=1.0.0",
+    "agent-framework>=0.1.0",
+    "structlog>=23.1.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "tenacity>=8.2.0",
+    "anyio>=4.0.0",
+    "typing-extensions>=4.0.0",
+    "tomli>=2.0.0;python_version<'3.11'",
+    # Memory module dependencies (session management)
+    "redis[hiredis]>=5.0.0",
+    "azure-storage-blob>=12.14.0",
+    "PyJWT>=2.0.0",
+    # Observability dependencies (OpenTelemetry)
+    "opentelemetry-api>=1.20.0",
+    "opentelemetry-sdk>=1.20.0",
+    "opentelemetry-exporter-otlp>=1.20.0",
+    # Secrets management
+    "azure-keyvault-secrets>=4.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+observability = [
+    # Azure Monitor integration
+    "azure-monitor-opentelemetry-exporter>=1.0.0b21",
+    # Jaeger exporter (optional)
+    "opentelemetry-exporter-jaeger>=1.20.0",
+]
+# Multi-model provider support
+anthropic = [
+    "anthropic>=0.25.0",
+]
+google = [
+    "google-generativeai>=0.5.0",
+]
+multi-model = [
+    "anthropic>=0.25.0",
+    "google-generativeai>=0.5.0",
+]
+all = [
+    "msft-agent-framework[dev,observability,multi-model]",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "config*"]
+
+# ==============================================================================
+# AGENT CONFIGURATION
+# All settings for your AI Assistant are configured here
+# ==============================================================================
+
+[tool.agent]
+# System prompt file (relative to project root)
+system_prompt = "config/system_prompt.txt"
+
+# Logging level (DEBUG, INFO, WARNING, ERROR)
+log_level = "INFO"
+
+# ==============================================================================
+# AZURE OPENAI CONFIGURATION
+# Required for the agent to function
+# ==============================================================================
+
+[tool.agent.azure_openai]
+# Your Azure OpenAI endpoint URL
+# Example: "https://your-resource.openai.azure.com/"
+endpoint = ""
+
+# Your deployment name for chat completions
+# Example: "gpt-4o"
+deployment = ""
+
+# API version (optional, defaults to latest)
+api_version = "2024-10-01-preview"
+
+# ==============================================================================
+# TOOL CONFIGURATION
+# Define tool-specific settings here
+# Each tool can have its own section: [tool.agent.tools.<tool_name>]
+# ==============================================================================
+
+[tool.agent.tools]
+# Directory containing tool JSON definitions
+config_dir = "config/tools"
+
+# Example tool configuration (uncomment and customize for your tools):
+# [tool.agent.tools.example_tool]
+# api_key = "your-api-key"
+# max_retries = 3
+# timeout = 30
+
+# ==============================================================================
+# DEVELOPMENT TOOLS CONFIGURATION
+# ==============================================================================
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

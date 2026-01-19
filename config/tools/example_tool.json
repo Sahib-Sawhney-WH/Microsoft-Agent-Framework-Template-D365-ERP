@@ -1,0 +1,21 @@
+{
+  "type": "function",
+  "function": {
+    "name": "example_tool",
+    "description": "An example tool that demonstrates the tool interface. Replace this with your own tool implementation. This tool echoes back the input with some processing.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "The message to process. The tool will echo it back with additional information."
+        },
+        "uppercase": {
+          "type": "boolean",
+          "description": "If true, convert the message to uppercase. Default is false."
+        }
+      },
+      "required": ["message"]
+    }
+  }
+}

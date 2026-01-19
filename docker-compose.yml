@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: deployment/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # Azure OpenAI (required)
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION:-2024-06-01}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+
+      # Azure Identity (for DefaultAzureCredential)
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+
+      # Redis cache (points to redis service)
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_SSL=false
+
+      # D365 MCP (optional - for D365 integration testing)
+      - D365_ENVIRONMENT_URL=${D365_ENVIRONMENT_URL}
+      - D365_CLIENT_ID=${D365_CLIENT_ID}
+      - D365_CLIENT_SECRET=${D365_CLIENT_SECRET}
+
+      # App config
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - RATE_LIMIT_ENABLED=false
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  redis_data:

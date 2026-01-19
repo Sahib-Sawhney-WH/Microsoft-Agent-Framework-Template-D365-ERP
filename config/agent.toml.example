@@ -1,0 +1,303 @@
+# ==============================================================================
+# AGENT CONFIGURATION - Copy this file to agent.toml and customize
+# ==============================================================================
+# cp config/agent.toml.example config/agent.toml
+# Then update the values below with your Azure resource details.
+# ==============================================================================
+
+[agent]
+# System prompt file (relative to project root)
+system_prompt = "config/system_prompt.txt"
+
+# Logging level (DEBUG, INFO, WARNING, ERROR)
+log_level = "INFO"
+
+# Default model to use (must match a name from [[agent.models]])
+default_model = "azure_openai"
+
+# ==============================================================================
+# MODEL PROVIDERS (Multi-Model Support)
+# Configure multiple LLM providers - agents can use different models
+# ==============================================================================
+
+# Azure OpenAI (default)
+[[agent.models]]
+name = "azure_openai"
+provider = "azure_openai"
+endpoint = "https://your-openai-resource.openai.azure.com/"
+deployment = "gpt-4o"
+api_version = "2024-10-01-preview"
+
+# OpenAI Direct (uncomment to enable)
+# [[agent.models]]
+# name = "openai"
+# provider = "openai"
+# model = "gpt-4-turbo"
+# # API key from OPENAI_API_KEY env var
+
+# Anthropic Claude (uncomment to enable)
+# [[agent.models]]
+# name = "claude"
+# provider = "anthropic"
+# model = "claude-3-opus-20240229"
+# # API key from ANTHROPIC_API_KEY env var
+
+# Google Gemini (uncomment to enable)
+# [[agent.models]]
+# name = "gemini"
+# provider = "gemini"
+# model = "gemini-pro"
+# # API key from GOOGLE_API_KEY env var
+
+# ==============================================================================
+# LEGACY AZURE OPENAI CONFIGURATION (Backward Compatible)
+# If [[agent.models]] is not configured, this section is used instead
+# ==============================================================================
+
+[agent.azure_openai]
+endpoint = "https://your-openai-resource.openai.azure.com/"
+deployment = "gpt-4o"  # or gpt-4, gpt-35-turbo, etc.
+api_version = "2024-10-01-preview"
+
+# ==============================================================================
+# TOOL CONFIGURATION (Local Tools)
+# Define tool-specific settings here
+# Each tool can have its own section: [agent.tools.<tool_name>]
+# ==============================================================================
+
+[agent.tools]
+# Directory containing tool JSON definitions
+config_dir = "config/tools"
+
+# Example: Configure settings for the example_tool
+# [agent.tools.example_tool]
+# api_base_url = "https://api.example.com"
+# timeout = 30
+# max_retries = 3
+
+# ==============================================================================
+# MCP CONFIGURATION (Model Context Protocol Servers)
+# Connect to external MCP servers for additional tool capabilities
+# ==============================================================================
+
+# MCP servers are defined using [[agent.mcp]] array format.
+# Supported types: "stdio", "http", "websocket"
+
+# ------------------------------------------------------------------------------
+# Example 1: Local stdio MCP server (runs as subprocess)
+# ------------------------------------------------------------------------------
+# [[agent.mcp]]
+# name = "calculator"
+# type = "stdio"
+# enabled = true
+# command = "uvx"
+# args = ["mcp-server-calculator"]
+# # Optional: environment variables for the subprocess
+# # env = { API_KEY = "xxx" }
+
+# ------------------------------------------------------------------------------
+# Example 2: HTTP/SSE MCP server
+# ------------------------------------------------------------------------------
+# [[agent.mcp]]
+# name = "my-api"
+# type = "http"
+# enabled = true
+# url = "https://api.example.com/mcp"
+# # Optional: authentication headers
+# # headers = { Authorization = "Bearer your-token" }
+
+# ------------------------------------------------------------------------------
+# Example 3: WebSocket MCP server
+# ------------------------------------------------------------------------------
+# [[agent.mcp]]
+# name = "realtime-data"
+# type = "websocket"
+# enabled = true
+# url = "wss://api.example.com/mcp"
+# # Optional: authentication headers (supported for WebSocket connections)
+# headers = { Authorization = "Bearer your-token", "X-API-Key" = "your-api-key" }
+
+# ------------------------------------------------------------------------------
+# Example 4: Stateful MCP server (Legacy D365 with manual token)
+# ------------------------------------------------------------------------------
+# [[agent.mcp]]
+# name = "d365-erp"
+# type = "http"
+# enabled = true
+# url = "https://d365-mcp.example.com/api/mcp"
+# headers = { Authorization = "Bearer ${D365_TOKEN}" }
+# stateful = true                          # Enable session handling
+# session_header = "X-D365-Session-Id"     # Header name for session ID
+# form_context_header = "X-D365-Form-Context"  # Header for form state
+# requires_user_id = true                  # Require user_id for sessions
+
+# ------------------------------------------------------------------------------
+# Example 5: D365 Finance & Operations with Azure AD OAuth (RECOMMENDED)
+# ------------------------------------------------------------------------------
+# Uses Azure Identity for automatic token acquisition and refresh.
+# Supports DefaultAzureCredential (flexible) or ClientSecretCredential (service).
+#
+# [[agent.mcp]]
+# name = "d365-fo"
+# type = "d365"
+# enabled = true
+# description = "D365 Finance & Operations"
+# timeout = 60  # HTTP timeout in seconds
+#
+# [agent.mcp.oauth]
+# environment_url = "https://myorg.operations.dynamics.com"
+# # Optional: If not provided, uses DefaultAzureCredential (az login, managed identity, etc.)
+# tenant_id = "your-azure-ad-tenant-id"
+# client_id = "your-app-registration-client-id"
+# # Use environment variable for secret (never commit secrets!)
+# client_secret = "${D365_CLIENT_SECRET}"
+#
+# Key D365 MCP Behaviors:
+# - 25 Row Limit: D365 MCP returns max 25 rows per query
+# - Object Names: Use object names (not labels) for menu items, controls
+# - Tabs: Tabs are closed by default - call open_or_close_tab first
+# - Session State: Forms maintain state across tool calls within a session
+
+# ==============================================================================
+# MCP SESSION CONFIGURATION
+# For stateful MCP servers that require session continuity (e.g., D365 ERP)
+# ==============================================================================
+
+[agent.mcp_sessions]
+enabled = false              # Enable MCP session management
+session_ttl = 3600          # Session TTL in seconds (1 hour)
+persist_sessions = true     # Persist sessions to ADLS for durability
+
+# ==============================================================================
+# WORKFLOW CONFIGURATION (Multi-Agent Pipelines)
+# Define multi-agent workflows for complex orchestration patterns
+# ==============================================================================
+
+# Workflows allow you to chain multiple agents together in predefined patterns.
+# Supported types: "sequential", "custom"
+
+# ------------------------------------------------------------------------------
+# Example 1: Sequential Workflow (agents execute in order)
+# ------------------------------------------------------------------------------
+# [[agent.workflows]]
+# name = "content-pipeline"
+# type = "sequential"
+# enabled = true
+# 
+# # Each agent's output becomes the next agent's input
+# [[agent.workflows.agents]]
+# name = "Researcher"
+# instructions = "Research the given topic and provide key facts and insights."
+# 
+# [[agent.workflows.agents]]
+# name = "Writer"
+# instructions = "Write engaging content based on the research provided."
+# 
+# [[agent.workflows.agents]]
+# name = "Reviewer"
+# instructions = "Review the content and provide a final polished version."
+
+# ------------------------------------------------------------------------------
+# Example 2: Custom Workflow (user-defined graph with edges)
+# ------------------------------------------------------------------------------
+# [[agent.workflows]]
+# name = "support-escalation"
+# type = "custom"
+# enabled = true
+# start = "Triage"
+# 
+# [[agent.workflows.agents]]
+# name = "Triage"
+# instructions = "Analyze the customer issue and determine severity."
+# 
+# [[agent.workflows.agents]]
+# name = "TechSupport"
+# instructions = "Provide technical solutions for the issue."
+# 
+# [[agent.workflows.agents]]
+# name = "Manager"
+# instructions = "Handle escalated issues with customer care."
+# 
+# [[agent.workflows.edges]]
+# from = "Triage"
+# to = "TechSupport"
+# 
+# [[agent.workflows.edges]]
+# from = "TechSupport"
+# to = "Manager"
+
+# ------------------------------------------------------------------------------
+# Example 3: Multi-Model Workflow (agents use different providers)
+# ------------------------------------------------------------------------------
+# [[agent.workflows]]
+# name = "research-pipeline"
+# type = "sequential"
+# enabled = true
+# 
+# [[agent.workflows.agents]]
+# name = "Researcher"
+# model = "openai"  # Uses OpenAI GPT-4
+# instructions = "Research the topic thoroughly using web search."
+# 
+# [[agent.workflows.agents]]
+# name = "Analyst"
+# model = "claude"  # Uses Anthropic Claude
+# instructions = "Analyze the research findings with critical thinking."
+# 
+# [[agent.workflows.agents]]
+# name = "Reporter"
+# # No model specified - uses default (azure_openai)
+# instructions = "Write a comprehensive final report."
+
+# ------------------------------------------------------------------------------
+# Active Workflow: Q&A Pipeline (for testing)
+# ------------------------------------------------------------------------------
+[[agent.workflows]]
+name = "qa-pipeline"
+type = "sequential"
+enabled = true
+
+[[agent.workflows.agents]]
+name = "Analyst"
+instructions = "Analyze the question and identify key points to address."
+# model = "claude"  # Uncomment to use a specific model
+
+[[agent.workflows.agents]]
+name = "Responder"
+instructions = "Provide a clear, concise response based on the analysis."
+# model = "azure_openai"  # Uncomment to use a specific model
+
+# ==============================================================================
+# MEMORY CONFIGURATION (Chat History Caching & Persistence)
+# Manages session state across conversations with Redis cache and ADLS persistence
+# ==============================================================================
+
+# Enable memory management (required for chat_id session support)
+# [agent.memory]
+# enabled = true
+
+# ------------------------------------------------------------------------------
+# Cache Configuration (Azure Cache for Redis)
+# Uses DefaultAzureCredential with Entra ID authentication - no API keys required
+# Requires: Azure Cache for Redis with AAD auth enabled + Data Access Policy
+# ------------------------------------------------------------------------------
+[agent.memory.cache]
+enabled = true
+host = "your-redis.redis.cache.windows.net"
+port = 6380
+ssl = true
+ttl = 300
+prefix = "chat:"
+database = 0
+
+# ------------------------------------------------------------------------------
+# Persistence Configuration (Azure Blob Storage)
+# Long-term storage for chat history. Uses DefaultAzureCredential.
+# Requires: Storage account with "Storage Blob Data Contributor" role
+# ------------------------------------------------------------------------------
+[agent.memory.persistence]
+enabled = true
+account_name = "yourstorageaccount"
+container = "chat-history"
+folder = "threads"
+schedule = "ttl+60"
